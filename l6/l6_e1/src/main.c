@@ -21,21 +21,20 @@ typedef struct adv_mfg_data {
 
 static const struct bt_le_adv_param *adv_param =
 	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_NONE, /* No options specified */
-			800, /* Min Advertising Interval 500ms (800*0.625ms) */
-			801, /* Max Advertising Interval 500.625ms (801*0.625ms) */
-			NULL); /* Set to NULL for undirected advertising */
+			800,                /* Min Advertising Interval 500ms (800*0.625ms) */
+			801,                /* Max Advertising Interval 500.625ms (801*0.625ms) */
+			NULL);              /* Set to NULL for undirected advertising */
 
-static adv_mfg_data_type adv_mfg_data = { COMPANY_ID_CODE, 0x00 };
+static adv_mfg_data_type adv_mfg_data = {COMPANY_ID_CODE, 0x00};
 
-static unsigned char url_data[] = { 0x17, '/', '/', 'a', 'c', 'a', 'd', 'e', 'm',
-				    'y',  '.', 'n', 'o', 'r', 'd', 'i', 'c', 's',
-				    'e',  'm', 'i', '.', 'c', 'o', 'm' };
+static unsigned char url_data[] = {0x17, '/', '/', 'a', 'c', 'a', 'd', 'e', 'm', 'y', '.', 'n', 'o',
+				   'r',  'd', 'i', 'c', 's', 'e', 'm', 'i', '.', 'c', 'o', 'm'};
 LOG_MODULE_REGISTER(Lesson2_Exercise2, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define RUN_STATUS_LED DK_LED1
+#define RUN_STATUS_LED         DK_LED1
 #define RUN_LED_BLINK_INTERVAL 1000
 
 static const struct bt_data ad[] = {

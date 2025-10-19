@@ -16,13 +16,13 @@
 
 LOG_MODULE_REGISTER(Lesson5_Exercise1, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 #define RUN_STATUS_LED DK_LED1
 #define CON_STATUS_LED DK_LED2
-#define USER_LED DK_LED3
-#define USER_BUTTON DK_BTN1_MSK
+#define USER_LED       DK_LED3
+#define USER_BUTTON    DK_BTN1_MSK
 
 #define RUN_LED_BLINK_INTERVAL 1000
 
@@ -83,9 +83,7 @@ static void recycled_cb(void)
 /* STEP 5.2 Define the callback function on_security_changed() */
 
 struct bt_conn_cb connection_callbacks = {
-	.connected = on_connected,
-	.disconnected = on_disconnected,
-	.recycled         = recycled_cb,
+	.connected = on_connected, .disconnected = on_disconnected, .recycled = recycled_cb,
 	/* STEP 5.1 - Add the security_changed member to the callback structure */
 
 };

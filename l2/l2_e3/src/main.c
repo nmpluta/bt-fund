@@ -19,10 +19,10 @@
 
 LOG_MODULE_REGISTER(Lesson2_Exercise3, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define RUN_STATUS_LED DK_LED1
+#define RUN_STATUS_LED         DK_LED1
 #define RUN_LED_BLINK_INTERVAL 1000
 static struct k_work adv_work;
 static const struct bt_data ad[] = {
@@ -31,7 +31,8 @@ static const struct bt_data ad[] = {
 };
 
 static const struct bt_data sd[] = {
-	/* STEP 3.2.2 - Include the 16-bytes (128-Bits) UUID of the LBS service in the scan response packet */
+	/* STEP 3.2.2 - Include the 16-bytes (128-Bits) UUID of the LBS service in the scan response
+	   packet */
 
 };
 /* STEP 5.2 - Resume advertising after a disconnection */

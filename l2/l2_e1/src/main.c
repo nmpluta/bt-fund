@@ -12,10 +12,10 @@
 
 LOG_MODULE_REGISTER(Lesson2_Exercise1, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define RUN_STATUS_LED DK_LED1
+#define RUN_STATUS_LED         DK_LED1
 #define RUN_LED_BLINK_INTERVAL 1000
 
 /* STEP 4.1.1 - Declare the advertising packet */

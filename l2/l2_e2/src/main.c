@@ -20,15 +20,14 @@
 
 /* STEP 2.3 - Define and initialize a variable of type adv_mfg_data_type */
 
-static unsigned char url_data[] = { 0x17, '/', '/', 'a', 'c', 'a', 'd', 'e', 'm',
-				    'y',  '.', 'n', 'o', 'r', 'd', 'i', 'c', 's',
-				    'e',  'm', 'i', '.', 'c', 'o', 'm' };
+static unsigned char url_data[] = {0x17, '/', '/', 'a', 'c', 'a', 'd', 'e', 'm', 'y', '.', 'n', 'o',
+				   'r',  'd', 'i', 'c', 's', 'e', 'm', 'i', '.', 'c', 'o', 'm'};
 LOG_MODULE_REGISTER(Lesson2_Exercise2, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-#define RUN_STATUS_LED DK_LED1
+#define RUN_STATUS_LED         DK_LED1
 #define RUN_LED_BLINK_INTERVAL 1000
 
 static const struct bt_data ad[] = {

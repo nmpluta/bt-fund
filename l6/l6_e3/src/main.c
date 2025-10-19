@@ -16,13 +16,13 @@
 
 LOG_MODULE_REGISTER(Lesson5_Exercise1, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 #define RUN_STATUS_LED DK_LED1
 #define CON_STATUS_LED DK_LED2
-#define USER_LED DK_LED3
-#define USER_BUTTON DK_BTN1_MSK
+#define USER_LED       DK_LED3
+#define USER_BUTTON    DK_BTN1_MSK
 
 #define RUN_LED_BLINK_INTERVAL 1000
 
@@ -54,7 +54,6 @@ static void advertising_start(void)
 	k_work_submit(&adv_work);
 }
 
-
 static void on_connected(struct bt_conn *conn, uint8_t err)
 {
 	if (err) {
@@ -73,7 +72,6 @@ static void on_disconnected(struct bt_conn *conn, uint8_t reason)
 
 	dk_set_led_off(CON_STATUS_LED);
 }
-
 
 static void recycled_cb(void)
 {
@@ -96,7 +94,7 @@ static void on_security_changed(struct bt_conn *conn, bt_security_t level, enum 
 struct bt_conn_cb connection_callbacks = {
 	.connected = on_connected,
 	.disconnected = on_disconnected,
-	.recycled         = recycled_cb,
+	.recycled = recycled_cb,
 	.security_changed = on_security_changed,
 };
 

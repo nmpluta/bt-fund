@@ -17,7 +17,7 @@
 
 #include <dk_buttons_and_leds.h>
 
-#define USER_BUTTON DK_BTN1_MSK
+#define USER_BUTTON    DK_BTN1_MSK
 #define RUN_STATUS_LED DK_LED1
 /* STEP 3.1 - Define an LED to show the connection status */
 
@@ -29,13 +29,13 @@ static struct k_work adv_work;
 static const struct bt_le_adv_param *adv_param = BT_LE_ADV_PARAM(
 	(BT_LE_ADV_OPT_CONN |
 	 BT_LE_ADV_OPT_USE_IDENTITY), /* Connectable advertising and use identity address */
-	BT_GAP_ADV_FAST_INT_MIN_1, /* 0x30 units, 48 units, 30ms */
-	BT_GAP_ADV_FAST_INT_MAX_1, /* 0x60 units, 96 units, 60ms */
-	NULL); /* Set to NULL for undirected advertising */
+	BT_GAP_ADV_FAST_INT_MIN_1,    /* 0x30 units, 48 units, 30ms */
+	BT_GAP_ADV_FAST_INT_MAX_1,    /* 0x60 units, 96 units, 60ms */
+	NULL);                        /* Set to NULL for undirected advertising */
 
 LOG_MODULE_REGISTER(Lesson3_Exercise1, LOG_LEVEL_INF);
 
-#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
 static const struct bt_data ad[] = {
@@ -45,7 +45,7 @@ static const struct bt_data ad[] = {
 
 static const struct bt_data sd[] = {
 	BT_DATA_BYTES(BT_DATA_UUID128_ALL,
-			  BT_UUID_128_ENCODE(0x00001523, 0x1212, 0xefde, 0x1523, 0x785feabcd123)),
+		      BT_UUID_128_ENCODE(0x00001523, 0x1212, 0xefde, 0x1523, 0x785feabcd123)),
 };
 
 static void adv_work_handler(struct k_work *work)
