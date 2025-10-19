@@ -12,14 +12,16 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/addr.h>
 /* STEP 1 - Include the header file for managing Bluetooth LE Connections */
+#include <zephyr/bluetooth/conn.h>
 
 /* STEP 8.2 - Include the header file for the LED Button Service */
-
+#include <bluetooth/services/lbs.h>
 #include <dk_buttons_and_leds.h>
 
-#define USER_BUTTON    DK_BTN1_MSK
-#define RUN_STATUS_LED DK_LED1
+#define USER_BUTTON           DK_BTN1_MSK
+#define RUN_STATUS_LED        DK_LED1
 /* STEP 3.1 - Define an LED to show the connection status */
+#define CONNECTION_STATUS_LED DK_LED2
 
 #define RUN_LED_BLINK_INTERVAL 1000
 
@@ -66,15 +68,69 @@ static void advertising_start(void)
 }
 
 /* STEP 2.2 - Implement the callback functions */
+void connected_cb(struct bt_conn *conn, uint8_t err)
+{
+	if (err) {
+		LOG_ERR("Connection failed (err 0x%02x)", err);
+		return;
+	}
+
+	LOG_INF("Connected");
+	my_conn = bt_conn_ref(conn);
+
+	/* STEP 3.2  Turn the connection status LED on */
+	dk_set_led(CONNECTION_STATUS_LED, 1);
+}
+
+void disconnected_cb(struct bt_conn *conn, uint8_t reason)
+{
+	LOG_INF("Disconnected (reason 0x%02x)", reason);
+
+	if (my_conn) {
+		bt_conn_unref(my_conn);
+		my_conn = NULL;
+	}
+
+	/* STEP 3.3 - Turn the connection status LED off */
+	dk_set_led(CONNECTION_STATUS_LED, 0);
+}
+
+void recycled_cb(void)
+{
+	advertising_start();
+}
 
 /* STEP 2.1 - Declare the connection_callback structure */
+struct bt_conn_cb conn_callbacks = {
+	.connected = connected_cb,
+	.disconnected = disconnected_cb,
+	.recycled = recycled_cb,
+};
 
 /* STEP 8.3 - Send a notification using the LBS characteristic. */
+static void button_changed(uint32_t button_state, uint32_t has_changed)
+{
+	int err;
+	bool button_pressed = button_state & USER_BUTTON;
+
+	if (has_changed & USER_BUTTON) {
+		LOG_INF("Button state %s", button_pressed ? "pressed" : "released");
+
+		err = bt_lbs_send_button_state(button_pressed);
+		if (err) {
+			LOG_ERR("Could not send button state (err %d)", err);
+		}
+	}
+}
 
 static int init_button(void)
 {
 	int err = 0;
 	/* STEP 8.4 - Complete the implementation of the init_button() function. */
+	err = dk_buttons_init(button_changed);
+	if (err) {
+		printk("Cannot init buttons (err: %d)\n", err);
+	}
 
 	return err;
 }
@@ -99,6 +155,11 @@ int main(void)
 	}
 
 	/* STEP 2.3 - Register our custom callbacks */
+	err = bt_conn_cb_register(&conn_callbacks);
+	if (err) {
+		LOG_ERR("Failed to register connection callbacks (err %d)", err);
+		return -1;
+	}
 
 	err = bt_enable(NULL);
 	if (err) {
