@@ -63,9 +63,19 @@ static struct k_work adv_work;
 
 static const struct device *uart = DEVICE_DT_GET(DT_CHOSEN(nordic_nus_uart));
 static struct k_work_delayable uart_work;
+
 /* STEP 6.2 - Declare the struct of the data item of the FIFOs */
+struct uart_data_t {
+	void *fifo_reserved; /* 1st word reserved for use by FIFO */
+	uint8_t data[UART_BUF_SIZE];
+	size_t len;
+};
 
 /* STEP 6.1 - Declare the FIFOs */
+static K_FIFO_DEFINE(
+	fifo_uart_rx_data); /* FIFO for data received from UART to be sent over Bluetooth LE */
+static K_FIFO_DEFINE(
+	fifo_uart_tx_data); /* FIFO for data received from Bluetooth LE to be sent over UART */
 
 static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -172,7 +182,7 @@ static void uart_cb(const struct device *dev, struct uart_event *evt, void *user
 		if (buf->len > 0) {
 			/* STEP 9.1 -  Push the data received from the UART peripheral into the
 			 * fifo_uart_rx_data FIFO */
-
+			k_fifo_put(&fifo_uart_rx_data, buf);
 		} else {
 			k_free(buf);
 		}
@@ -326,11 +336,11 @@ static void adv_work_handler(struct k_work *work)
 	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
 	if (err) {
-		printk("Advertising failed to start (err %d)\n", err);
+		LOG_ERR("Advertising failed to start (err %d)", err);
 		return;
 	}
 
-	printk("Advertising successfully started\n");
+	LOG_INF("Advertising successfully started");
 }
 
 static void advertising_start(void)
@@ -377,7 +387,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
 static void recycled_cb(void)
 {
-	printk("Connection object available from previous conn. Disconnect is complete!\n");
+	LOG_INF("Connection object available from previous conn. Disconnect is complete!");
 	advertising_start();
 }
 
@@ -483,7 +493,6 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 
 	for (uint16_t pos = 0; pos != len;) {
 		struct uart_data_t *tx = k_malloc(sizeof(*tx));
-
 		if (!tx) {
 			LOG_WRN("Not able to allocate UART send data buffer");
 			return;
@@ -510,9 +519,19 @@ static void bt_receive_cb(struct bt_conn *conn, const uint8_t *const data, uint1
 			tx->len++;
 		}
 		/* STEP 8.3 - Forward the data received over Bluetooth LE to the UART peripheral */
+		err = uart_tx(uart, tx->data, tx->len, SYS_FOREVER_MS);
+		if (err) {
+			LOG_WRN("Failed to send data over UART (err: %d)", err);
+			LOG_INF("Pushing data to UART TX FIFO");
+			k_fifo_put(&fifo_uart_tx_data, tx);
+		}
 	}
 }
+
 /* STEP 8.1 - Create a variable of type bt_nus_cb and initialize it */
+static struct bt_nus_cb nus_cb = {
+	.received = bt_receive_cb,
+};
 
 void error(void)
 {
@@ -579,17 +598,22 @@ int main(void)
 
 	configure_gpio();
 	/* STEP 7 - Initialize the UART Peripheral  */
+	err = uart_init();
+	if (err) {
+		LOG_ERR("Cannot init UART (err: %d)", err);
+		error();
+	}
 
 	if (IS_ENABLED(CONFIG_BT_NUS_SECURITY_ENABLED)) {
 		err = bt_conn_auth_cb_register(&conn_auth_callbacks);
 		if (err) {
-			printk("Failed to register authorization callbacks.\n");
+			LOG_ERR("Failed to register authorization callbacks.");
 			return 0;
 		}
 
 		err = bt_conn_auth_info_cb_register(&conn_auth_info_callbacks);
 		if (err) {
-			printk("Failed to register authorization info callbacks.\n");
+			LOG_ERR("Failed to register authorization info callbacks.");
 			return 0;
 		}
 	}
@@ -606,7 +630,13 @@ int main(void)
 	if (IS_ENABLED(CONFIG_SETTINGS)) {
 		settings_load();
 	}
+
 	/* STEP 8.2 - Pass your application callback function to the NUS service */
+	err = bt_nus_init(&nus_cb);
+	if (err) {
+		LOG_ERR("Failed to initialize NUS service (err: %d)", err);
+		return 0;
+	}
 
 	k_work_init(&adv_work, adv_work_handler);
 	advertising_start();
@@ -616,6 +646,57 @@ int main(void)
 		k_sleep(K_MSEC(RUN_LED_BLINK_INTERVAL));
 	}
 }
+
 /* STEP 9.3 - Define the thread function  */
+void bt_uart_thread(void)
+{
+	int err;
+	struct uart_data_t *rx_data;
+	struct uart_data_t nus_data = {0};
+
+	/* Wait until Bluetooth is initialized */
+	k_sem_take(&ble_init_ok, K_FOREVER);
+
+	while (1) {
+		/* Get the data from fifo_uart_rx_data FIFO */
+		rx_data = k_fifo_get(&fifo_uart_rx_data, K_FOREVER);
+
+		/* Number of bytes that can be processed in this iteration */
+		size_t plen = MIN(sizeof(nus_data.data) - nus_data.len, rx_data->len);
+		/* Current position in the source buffer */
+		size_t loc = 0;
+
+		while (plen > 0) {
+			/* Copy chunk from rx_data to nus_data accumulator */
+			memcpy(&nus_data.data[nus_data.len], &rx_data->data[loc], plen);
+			nus_data.len += plen;
+			loc += plen;
+
+			/* Send if buffer is full or newline detected */
+			if (nus_data.len >= sizeof(nus_data.data) ||
+			    (nus_data.data[nus_data.len - 1] == '\n') ||
+			    (nus_data.data[nus_data.len - 1] == '\r')) {
+
+				if (current_conn) {
+					err = bt_nus_send(current_conn, nus_data.data,
+							  nus_data.len);
+					if (err) {
+						LOG_WRN("Failed to send data over BLE (err: %d)",
+							err);
+					}
+				} else {
+					LOG_DBG("No BLE connection, data dropped");
+				}
+				nus_data.len = 0;
+			}
+
+			/* Calculate remaining bytes to process */
+			plen = MIN(sizeof(nus_data.data), rx_data->len - loc);
+		}
+
+		k_free(rx_data);
+	}
+}
 
 /* STEP 9.2 - Create a dedicated thread for sending the data over Bluetooth LE. */
+K_THREAD_DEFINE(bt_uart_thread_id, STACKSIZE, bt_uart_thread, NULL, NULL, NULL, PRIORITY, 0, 0);

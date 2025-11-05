@@ -33,12 +33,14 @@ LOG_MODULE_REGISTER(Lesson4_Exercise2, LOG_LEVEL_INF);
 #define STACKSIZE 1024
 #define PRIORITY  7
 
-#define RUN_LED_BLINK_INTERVAL 1000
+#define RUN_LED_BLINK_INTERVAL    1000
 /* STEP 17 - Define the interval at which you want to send data at */
+#define SENSOR_DATA_SEND_INTERVAL 500
 
 static bool app_button_state;
 static struct k_work adv_work;
 /* STEP 15 - Define the data you want to stream over Bluetooth LE */
+static uint32_t simulated_sensor_data = 0;
 
 static bool app_button_state;
 
@@ -74,6 +76,14 @@ static void recycled_cb(void)
 }
 
 /* STEP 16 - Define a function to simulate the data */
+static uint32_t simulate_sensor_data(void)
+{
+	simulated_sensor_data++;
+	if (simulated_sensor_data > 100) {
+		simulated_sensor_data = 0;
+	}
+	return simulated_sensor_data;
+}
 
 static void app_led_cb(bool led_state)
 {
@@ -86,6 +96,25 @@ static bool app_button_cb(void)
 }
 
 /* STEP 18.1 - Define the thread function  */
+static void sensor_data_send_thread(void)
+{
+	int err;
+	uint32_t sensor_value;
+
+	while (1) {
+		sensor_value = simulate_sensor_data();
+
+		/* Send the simulated data as notification */
+		err = my_lbs_send_sensor_notify(sensor_value);
+		if (err) {
+			LOG_ERR("Failed to send sensor data (err %d)", err);
+		} else {
+			LOG_INF("Sensor data sent: %u", sensor_value);
+		}
+
+		k_sleep(K_MSEC(SENSOR_DATA_SEND_INTERVAL));
+	}
+}
 
 static struct my_lbs_cb app_callbacks = {
 	.led_cb = app_led_cb,
@@ -97,6 +126,7 @@ static void button_changed(uint32_t button_state, uint32_t has_changed)
 	if (has_changed & USER_BUTTON) {
 		uint32_t user_button_state = button_state & USER_BUTTON;
 		/* STEP 6 - Send indication on a button press */
+		my_lbs_send_button_state_indicate(user_button_state ? true : false);
 
 		app_button_state = user_button_state ? true : false;
 	}
@@ -179,3 +209,5 @@ int main(void)
 }
 
 /* STEP 18.2 - Define and initialize a thread to send data periodically */
+K_THREAD_DEFINE(sensor_data_thread_id, STACKSIZE, sensor_data_send_thread, NULL, NULL, NULL,
+		PRIORITY, 0, 0);
