@@ -81,18 +81,52 @@ static void recycled_cb(void)
 }
 
 /* STEP 5.2 Define the callback function on_security_changed() */
+static void on_security_changed(struct bt_conn *conn, bt_security_t level, enum bt_security_err err)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	if (!err) {
+		LOG_INF("Security changed: %s level %u\n", addr, level);
+	} else {
+		LOG_WRN("Security failed: %s level %u err %d", addr, level, err);
+	}
+}
 
 struct bt_conn_cb connection_callbacks = {
-	.connected = on_connected, .disconnected = on_disconnected, .recycled = recycled_cb,
+	.connected = on_connected,
+	.disconnected = on_disconnected,
+	.recycled = recycled_cb,
 	/* STEP 5.1 - Add the security_changed member to the callback structure */
-
+	.security_changed = on_security_changed,
 };
 
 /* STEP 9.1 - Define the callback function auth_passkey_display */
+static void auth_passkey_display(struct bt_conn *conn, unsigned int passkey)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Passkey for %s: %06u\n", addr, passkey);
+}
 
 /* STEP 9.2 - Define the callback function auth_cancel */
+static void auth_cancel(struct bt_conn *conn)
+{
+	char addr[BT_ADDR_LE_STR_LEN];
+
+	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
+
+	LOG_INF("Pairing cancelled: %s\n", addr);
+}
 
 /* STEP 9.3 - Declare the authenticated pairing callback structure */
+static struct bt_conn_auth_cb conn_auth_callbacks = {
+	.passkey_display = auth_passkey_display,
+	.cancel = auth_cancel,
+};
 
 static void app_led_cb(bool led_state)
 {
@@ -151,6 +185,11 @@ int main(void)
 	}
 
 	/* STEP 10 - Register the authentication callbacks */
+	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
+	if (err) {
+		LOG_INF("Failed to register authorization callbacks (err %d)\n", err);
+		return -1;
+	}
 
 	bt_conn_cb_register(&connection_callbacks);
 
